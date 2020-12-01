@@ -420,6 +420,11 @@ bool rrc::is_paging_opportunity(uint32_t tti, uint32_t* payload_len)
 
   if (paging_rec->paging_record_list.size() > 0) {
     byte_buf_paging.clear();
+    printf("NOW ETWS Paging is working\n");
+    paging_rec->paging_record_list_present = true;
+    paging_rec->etws_ind_present = true;
+    paging_rec->sys_info_mod_present = true;
+    paging_rec->non_crit_ext_present = true;
     asn1::bit_ref bref(byte_buf_paging.msg, byte_buf_paging.get_tailroom());
     if (pcch_msg.pack(bref) == asn1::SRSASN_ERROR_ENCODE_FAIL) {
       rrc_log->error("Failed to pack PCCH\n");

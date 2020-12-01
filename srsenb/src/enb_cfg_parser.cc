@@ -1454,7 +1454,67 @@ int parse_sib9(std::string filename, sib_type9_s* data)
     return -1;
   }
 }
+int parse_sib10(std::string filename, sib_type10_s* data)
+{
+  parser::section sib10("sib10");
 
+
+  sib10.add_field(make_asn1_bitstring_number_parser("msg_id", &data->msg_id));
+  sib10.add_field(make_asn1_bitstring_number_parser("serial_num", &data->serial_num));
+
+  data->warning_type[0] = 0x08;
+  data->warning_type[1] = 0x80; 
+  std::cout << "msg_id " << &data->msg_id << std::endl;
+  
+  return parser::parse_section(std::move(filename), &sib10);
+}
+
+int parse_sib11(std::string filename, sib_type11_s* data)
+{ 
+    bool        warning_enabled, coding_enabled;
+  // std::string data_coding_scheme;
+  std::string warning_msg_segment;
+
+  parser::section sib11("sib11");
+
+  sib11.add_field(make_asn1_bitstring_number_parser("msg_id", &data->msg_id));
+  sib11.add_field(make_asn1_bitstring_number_parser("serial_num", &data->serial_num));
+  // sib11.add_field(new parser::field<bool>("data_coding_scheme_present",&data->data_coding_scheme_present));
+  // sib11.add_field(new parser::field<std::string>("data_coding_scheme",&data_coding_scheme,&coding_enabled));
+  // if(data_coding_scheme.size() > 48) {
+	// 	    data_coding_scheme.resize(48);
+	//     }
+  // data->data_coding_scheme.from_string(data_coding_scheme);
+
+  data->data_coding_scheme_present = true;
+   data->data_coding_scheme[0] = 0x48;
+  // data->warning_msg_segment_type = data->warning_msg_segment_type.last_segment;
+  // data->warning_msg_segment_num = 0;
+  parser::section warning_msg_segment_type("warning_msg_segment_type");
+  sib11.add_subsection(&warning_msg_segment_type);
+  warning_msg_segment_type.add_field(make_asn1_enum_str_parser("warning_msg_segment_type", &data->warning_msg_segment_type));
+  sib11.add_field(new parser::field<std::string>("warning_msg_segment",&warning_msg_segment,&warning_enabled));
+  if (!parser::parse_section(filename, &sib11)) {
+    if(warning_enabled) {
+    std::vector <uint8> test = {2};
+    test.push_back('\000');
+
+      for (uint i = 1;i< warning_msg_segment.size() ;i++){
+      test.push_back(warning_msg_segment[i]);
+      test.push_back('\000');
+      }
+  data->warning_msg_segment.resize(SRSLTE_MIN((uint32_t)test.size(), 48));
+  uint8* a = &test[0];
+  memcpy(data->warning_msg_segment.data(), a, data->warning_msg_segment.size());
+    }
+  }
+  // uint8  warning_msg_segment[] = {2,0x00,0x54,0x00,0x65,0x00, 0x6c, 0x00,0x65,0x00, 0x6b,0x00, 0x6f,0x00, 0x6d,0x00,0x20,0x00,0x43,0x00, 0x4c,0x00 ,0x41,0x00,0x4e,0x00, 0x20,0x00, 0x69,0x00, 0x73,0x00, 0x20,0x00, 0x41,0x00, 0x76,0x00, 0x61,0x00, 0x69,0x00, 0x6c,0x00, 0x61,0x00, 0x62,0x00, 0x6c,0x00, 0x65,0x00, 0x20,0x00, 0x21,0x00, 0x21,0x00};
+  // asn1::dyn_octstring octstr(sizeof(warning_msg_segment));
+  // memcpy(octstr.data(), warning_msg_segment, sizeof(warning_msg_segment));
+  // data->warning_msg_segment = octstr;
+  
+  return parser::parse_section(std::move(filename), &sib11);
+}
 int parse_sib13(std::string filename, sib_type13_r9_s* data)
 {
   parser::section sib13("sib13");
@@ -1486,6 +1546,8 @@ int parse_sibs(all_args_t* args_, rrc_cfg_t* rrc_cfg_, srsenb::phy_cfg_t* phy_co
   sib_type4_s*     sib4  = &rrc_cfg_->sibs[3].set_sib4();
   sib_type7_s*     sib7  = &rrc_cfg_->sibs[6].set_sib7();
   sib_type9_s*     sib9  = &rrc_cfg_->sibs[8].set_sib9();
+  sib_type10_s*     sib10  = &rrc_cfg_->sibs[9].set_sib10();
+  sib_type11_s*     sib11  = &rrc_cfg_->sibs[10].set_sib11();
   sib_type13_r9_s* sib13 = &rrc_cfg_->sibs[12].set_sib13_v920();
 
   sib_type1_s* sib1 = &rrc_cfg_->sib1;
@@ -1563,6 +1625,16 @@ int parse_sibs(all_args_t* args_, rrc_cfg_t* rrc_cfg_, srsenb::phy_cfg_t* phy_co
   // Generate SIB9 if defined in mapping info
   if (sib_is_present(sib1->sched_info_list, sib_type_e::sib_type9)) {
     if (sib_sections::parse_sib9(args_->enb_files.sib_config, sib9) != SRSLTE_SUCCESS) {
+      return SRSLTE_ERROR;
+    }
+  }
+  if (sib_is_present(sib1->sched_info_list, sib_type_e::sib_type10)) {
+    if (sib_sections::parse_sib10(args_->enb_files.sib_config, sib10) != SRSLTE_SUCCESS) {
+      return SRSLTE_ERROR;
+    }
+  }
+  if (sib_is_present(sib1->sched_info_list, sib_type_e::sib_type11)) {
+    if (sib_sections::parse_sib11(args_->enb_files.sib_config, sib11) != SRSLTE_SUCCESS) {
       return SRSLTE_ERROR;
     }
   }

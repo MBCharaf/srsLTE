@@ -174,3 +174,21 @@ sib7 =
         }
     );
 };
+
+sib10 = 
+{
+	msg_id = 0x1104;
+	serial_num = 0x3004;
+};
+sib11 = 
+{
+	msg_id = 0x1104;
+	serial_num = 0x3004;
+	data_coding_scheme_present = true;
+	data_coding_scheme = "01";
+    warning_msg_segment_type =
+    {
+        warning_msg_segment_type = "lastSegment";
+    };
+    warning_msg_segment = " Welcome to RadioLab@HTWK";
+};
